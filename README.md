@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Infographic AI Generator
+
+A Next.js application that generates professional infographics using Google Gemini's **Nano Banana Pro** model (`gemini-3-pro-image-preview`). Simply describe what you want, and AI creates a stunning visual infographic.
+
+## Features
+
+- **AI-Powered Generation**: Uses Google Gemini 3 Pro Image Preview (Nano Banana Pro) for high-quality infographic creation
+- **Google Search Integration**: Automatically fetches data from URLs and searches for real-time information
+- **Optimized Prompts**: Built-in system prompt optimized for infographic design (layout, typography, data visualization)
+- **High Resolution**: Generates 2K resolution images with 9:16 vertical aspect ratio
+- **Modern UI**: Clean, responsive interface built with Tailwind CSS
+- **One-Click Download**: Download your generated infographics as PNG files
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router)
+- **Styling**: Tailwind CSS 4
+- **AI**: Google Gemini API (`@google/genai`)
+- **Language**: TypeScript
 
 ## Getting Started
 
-First, run the development server:
+### 1. Clone and Install
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <your-repo>
+cd infographic-ai
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Set Up API Key
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Create a `.env.local` file in the project root:
 
-## Learn More
+```env
+GEMINI_API_KEY=your_api_key_here
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Run Development Server
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## Deploy on Vercel
+## Usage
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Enter a description of the infographic you want:
+   - **Text prompt**: "Benefits of remote work with 5 key statistics"
+   - **With URL**: "Create an infographic about https://example.com/article"
+   - **Current data**: "Latest AI trends in 2026 with statistics"
+2. Click "Generate"
+3. Wait 10-30 seconds for AI generation (longer if fetching from URLs)
+4. Download your infographic or regenerate for variations
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### URL & Search Support
+
+The AI can automatically:
+- **Extract data from URLs** you provide in your prompt
+- **Search for real-time information** on topics requiring current data
+- **Verify facts and statistics** through Google Search
+- **Include source attribution** in the infographic footer
+
+## Project Structure
+
+```
+app/
+├── actions/
+│   └── generateInfographic.ts  # Server action for Gemini API
+├── components/
+│   ├── HeroHeader.tsx          # Title and description
+│   ├── PromptInput.tsx         # Input area with generate button
+│   ├── TrustBadges.tsx         # Social proof section
+│   └── TemplateGallery.tsx     # Template browsing section
+├── page.tsx                     # Main application page
+├── layout.tsx                   # Root layout
+└── globals.css                  # Global styles
+```
+
+## AI Prompt Engineering
+
+The system uses a carefully crafted prompt that instructs the AI to:
+
+- Use clean, organized vertical layouts with visual hierarchy
+- Render text clearly and legibly with bold headers
+- Apply professional color palettes with good contrast
+- Include relevant icons and visual elements
+- Maintain adequate white space for readability
+- Structure content with title, sections, and conclusion
+
+## API Configuration
+
+The generation uses these settings:
+- **Model**: `gemini-3-pro-image-preview` (Nano Banana Pro)
+- **Aspect Ratio**: 9:16 (vertical, ideal for infographics)
+- **Resolution**: 2K
+- **Response Modalities**: IMAGE and TEXT
+- **Tools**: Google Search (for URL extraction and real-time data)
+
+## Troubleshooting
+
+| Error | Solution |
+|-------|----------|
+| "GEMINI_API_KEY not set" | Add your API key to `.env.local` |
+| "Invalid API key" | Verify your key at [AI Studio](https://aistudio.google.com/apikey) |
+| "Request blocked by safety filters" | Try a different, more neutral prompt |
+| "Rate limit exceeded" | Wait a moment and try again |
+
+## License
+
+MIT
