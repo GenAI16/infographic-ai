@@ -107,7 +107,7 @@ export default function Home() {
         <div className="hidden md:flex gap-6 text-sm font-medium text-slate-600">
           <a href="#" className="hover:text-slate-900">Templates</a>
           <a href="#" className="hover:text-slate-900">Features</a>
-          <a href="#" className="hover:text-slate-900">Pricing</a>
+          <a href="/pricing" className="hover:text-slate-900">Pricing</a>
         </div>
         <div className="flex items-center gap-4">
           <CreditsDisplay refreshTrigger={creditsRefresh} />

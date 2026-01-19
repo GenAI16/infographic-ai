@@ -6,7 +6,7 @@
 // Enums
 export type GenerationStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'refunded';
-export type PaymentProvider = 'stripe' | 'paypal' | 'razorpay' | 'manual';
+export type PaymentProvider = 'stripe' | 'paypal' | 'razorpay' | 'manual' | 'dodo';
 export type TransactionType = 'purchase' | 'usage' | 'bonus' | 'refund' | 'adjustment';
 
 // =====================================================
@@ -85,6 +85,7 @@ export interface CreditPackage {
   is_active: boolean;
   sort_order: number;
   created_at: string;
+  dodo_product_id?: string | null;
 }
 
 // =====================================================

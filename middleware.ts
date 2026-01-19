@@ -12,8 +12,9 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
-     * Feel free to modify this pattern to include more paths.
+     * - api/webhooks/dodo (public webhook endpoint for Dodo Payments)
+     *   We must NOT run auth middleware on webhooks to avoid 307 -> /login.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/webhooks/dodo|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
