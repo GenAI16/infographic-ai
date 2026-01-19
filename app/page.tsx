@@ -5,6 +5,8 @@ import { HeroHeader } from './components/HeroHeader';
 import { PromptInput } from './components/PromptInput';
 import { TrustBadges } from './components/TrustBadges';
 import { TemplateGallery } from './components/TemplateGallery';
+import { UserNav } from './components/UserNav';
+import { CreditsDisplay } from './components/CreditsDisplay';
 import { generateInfographic, GenerationResult } from './actions/generateInfographic';
 
 export default function Home() {
@@ -13,6 +15,7 @@ export default function Home() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [creditsRefresh, setCreditsRefresh] = useState(0);
 
   const handleGenerate = async () => {
     if (!topic.trim()) return;
@@ -26,16 +29,27 @@ export default function Home() {
       // Call the real Gemini AI API
       const result: GenerationResult = await generateInfographic(topic, '9:16', '2K');
       
-      if (result.success && result.imageBase64) {
-        // Create a data URL from the base64 image
-        const dataUrl = `data:${result.mimeType || 'image/png'};base64,${result.imageBase64}`;
-        setGeneratedImage(dataUrl);
+      if (result.success) {
+        // Prefer storage URL if available, fallback to base64
+        if (result.imageUrl) {
+          setGeneratedImage(result.imageUrl);
+        } else if (result.imageBase64) {
+          // Create a data URL from the base64 image
+          const dataUrl = `data:${result.mimeType || 'image/png'};base64,${result.imageBase64}`;
+          setGeneratedImage(dataUrl);
+        }
         
         if (result.textResponse) {
           setAiResponse(result.textResponse);
         }
+        
+        // Refresh credits display
+        setCreditsRefresh(prev => prev + 1);
       } else {
         setError(result.error || 'Failed to generate infographic. Please try again.');
+        
+        // Refresh credits in case of refund
+        setCreditsRefresh(prev => prev + 1);
       }
     } catch (err) {
       console.error('Generation error:', err);
@@ -54,13 +68,28 @@ export default function Home() {
     if (!generatedImage) return;
     
     try {
-      // For data URLs, we can directly create a download link
-      const link = document.createElement('a');
-      link.href = generatedImage;
-      link.download = `infographic-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Check if it's a URL or data URL
+      if (generatedImage.startsWith('http')) {
+        // For storage URLs, fetch and download
+        const response = await fetch(generatedImage);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `infographic-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } else {
+        // For data URLs, we can directly create a download link
+        const link = document.createElement('a');
+        link.href = generatedImage;
+        link.download = `infographic-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (error) {
       console.error('Download failed:', error);
       alert('Failed to download image. Please try again.');
@@ -80,9 +109,9 @@ export default function Home() {
           <a href="#" className="hover:text-slate-900">Features</a>
           <a href="#" className="hover:text-slate-900">Pricing</a>
         </div>
-        <div className="flex gap-3">
-          <button className="text-slate-600 font-medium hover:text-slate-900 px-3 py-2">Log in</button>
-          <button className="bg-slate-900 text-white px-4 py-2 rounded-full font-medium hover:bg-slate-800 transition-colors">Sign up</button>
+        <div className="flex items-center gap-4">
+          <CreditsDisplay refreshTrigger={creditsRefresh} />
+          <UserNav />
         </div>
       </nav>
 

@@ -1,14 +1,21 @@
 'use server';
 
 import { GoogleGenAI } from '@google/genai';
+import { createGeneration, updateGenerationResult, markGenerationFailed } from './generations';
+import { getUserCredits } from './credits';
+import { uploadInfographic } from './storage';
+import { createClient } from '@/lib/supabase/server';
 
 // Infographic generation result type
 export interface GenerationResult {
   success: boolean;
   imageBase64?: string;
+  imageUrl?: string; // Supabase Storage URL
   mimeType?: string;
   error?: string;
   textResponse?: string;
+  generationId?: string;
+  creditsRemaining?: number;
 }
 
 /**
@@ -56,6 +63,8 @@ Generate a complete, visually stunning infographic that clearly communicates the
  * Generates an infographic using Google Gemini's Nano Banana Pro model.
  * Uses the gemini-3-pro-image-preview model for high-quality image generation
  * with advanced text rendering capabilities.
+ * 
+ * This function also handles credits deduction and generation tracking.
  */
 export async function generateInfographic(
   userPrompt: string,
@@ -78,6 +87,33 @@ export async function generateInfographic(
       error: 'Please provide a description for your infographic.',
     };
   }
+
+  // Check user credits and create generation record
+  const credits = await getUserCredits();
+  if (!credits || credits.balance < 1) {
+    return {
+      success: false,
+      error: 'Insufficient credits. Please purchase more credits to continue.',
+      creditsRemaining: credits?.balance || 0,
+    };
+  }
+
+  // Create generation record and deduct credits
+  const generationResult = await createGeneration(
+    userPrompt.trim(),
+    aspectRatio,
+    imageSize,
+    1 // Credits required
+  );
+
+  if (!generationResult.success || !generationResult.generationId) {
+    return {
+      success: false,
+      error: generationResult.error || 'Failed to create generation record.',
+    };
+  }
+
+  const generationId = generationResult.generationId;
 
   try {
     // Initialize the Gemini client
@@ -126,18 +162,61 @@ export async function generateInfographic(
 
     // Check if we got an image
     if (!imageBase64) {
+      // Mark generation as failed and refund credits
+      await markGenerationFailed(generationId, 'AI did not generate an image');
+      
       return {
         success: false,
         error: 'The AI did not generate an image. Please try again with a different prompt.',
         textResponse,
+        generationId,
       };
     }
+
+    // Get user ID for storage path
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      await markGenerationFailed(generationId, 'User not authenticated');
+      return {
+        success: false,
+        error: 'Authentication error. Please log in again.',
+        generationId,
+      };
+    }
+
+    // Upload image to Supabase Storage
+    const uploadResult = await uploadInfographic(
+      imageBase64,
+      user.id,
+      generationId,
+      mimeType || 'image/png'
+    );
+
+    let imageUrl: string | undefined;
+    
+    if (uploadResult.success && uploadResult.url) {
+      imageUrl = uploadResult.url;
+      // Save the generation result with storage URL
+      await updateGenerationResult(generationId, imageUrl, textResponse, true);
+    } else {
+      // Storage upload failed, save base64 as fallback
+      console.warn('Storage upload failed, saving base64:', uploadResult.error);
+      await updateGenerationResult(generationId, imageBase64, textResponse, false);
+    }
+
+    // Get updated credits balance
+    const updatedCredits = await getUserCredits();
 
     return {
       success: true,
       imageBase64,
+      imageUrl,
       mimeType,
       textResponse,
+      generationId,
+      creditsRemaining: updatedCredits?.balance || 0,
     };
   } catch (error) {
     console.error('Gemini API Error:', error);
@@ -145,11 +224,15 @@ export async function generateInfographic(
     // Handle specific error types
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     
+    // Mark generation as failed and refund credits
+    await markGenerationFailed(generationId, errorMessage);
+    
     // Check for common error patterns
     if (errorMessage.includes('API_KEY')) {
       return {
         success: false,
         error: 'Invalid API key. Please check your GEMINI_API_KEY in .env.local',
+        generationId,
       };
     }
     
@@ -157,6 +240,7 @@ export async function generateInfographic(
       return {
         success: false,
         error: 'The request was blocked by safety filters. Please try a different prompt.',
+        generationId,
       };
     }
 
@@ -164,12 +248,14 @@ export async function generateInfographic(
       return {
         success: false,
         error: 'API rate limit exceeded. Please wait a moment and try again.',
+        generationId,
       };
     }
 
     return {
       success: false,
       error: `Failed to generate infographic: ${errorMessage}`,
+      generationId,
     };
   }
 }
